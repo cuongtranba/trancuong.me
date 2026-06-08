@@ -2,6 +2,7 @@
   "name": "trancuong",
   "type": "module",
   "version": "6.1.0",
+  "packageManager": "pnpm@10.15.1",
   "engines": {
     "node": ">=22.12.0"
   },
