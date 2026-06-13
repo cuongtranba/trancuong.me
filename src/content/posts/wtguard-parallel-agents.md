@@ -2,11 +2,11 @@
 author: Tran Cuong
 pubDatetime: 2026-06-13T10:00:00.000+07:00
 modDatetime:
-title: "Git worktrees and a guard against main when running parallel agents"
+title: "How I stopped parallel Claude Code agents from trampling main with wtguard"
 featured: true
 draft: false
 tags: ["go", "git", "agents"]
-description: "How I keep parallel Claude Code agents from trampling one shared repository."
+description: "How I use git worktrees and a pre-commit guard to let parallel Claude Code agents collaborate safely."
 ---
 
 The first time I tried running multiple Claude Code sessions against the same repository, the failure mode was obvious: they all had the same working tree, the same index, and the same idea that `main` was a reasonable place to put work.
@@ -60,6 +60,18 @@ docker run -d \
 ```
 
 The agents do not coordinate by talking to each other. They coordinate through Git and files. The prompt tells them to claim work by creating a lock file under `current_tasks/`, commit it, and push. If the push fails, somebody else probably claimed the task first.
+
+```mermaid
+stateDiagram-v2
+  [*] --> PickTask
+  PickTask --> CreateLock: write current_tasks/<task>.txt
+  CreateLock --> CommitClaim
+  CommitClaim --> PushClaim
+  PushClaim --> WorkSession: push succeeds
+  PushClaim --> SyncAndRetry: push fails
+  SyncAndRetry --> PickTask
+  WorkSession --> [*]
+```
 
 ```bash
 git add current_tasks/<task_name>.txt

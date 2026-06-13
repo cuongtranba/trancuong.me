@@ -2,14 +2,24 @@
 author: Tran Cuong
 pubDatetime: 2026-06-13T10:00:00.000+07:00
 modDatetime:
-title: "Building a Go Library for Managing Subprocesses"
+title: "How I wrapped os/exec in Go for long-running subprocess communication"
 featured: false
 draft: false
-tags: [go, open-source]
-description: "How I built a simple Go library to manage subprocesses with bidirectional I/O communication"
+tags: ["go", "open-source"]
+description: "How I built a thin Go wrapper over os/exec for bidirectional I/O with long-running child processes."
 ---
 
 I built `subprocess` because I kept needing the same thing in small Go tools: start a command, write to its stdin, read from stdout and stderr, and shut it down without turning every caller into a pile of `os/exec` plumbing.
+
+```mermaid
+flowchart LR
+  A[Parent process] -->|Write(input)| B[Process.stdin pipe]
+  B --> C[Child process]
+  C --> D[Process.stdout pipe]
+  C --> E[Process.stderr pipe]
+  D -->|Stdout()| A
+  E -->|Stderr()| A
+```
 
 The standard library already gives Go a solid process API. What I wanted was a smaller surface around the pattern I used most often: long-running child processes where the parent and child keep talking after `Start`.
 
@@ -108,6 +118,17 @@ func (p *Process) Wait() error {
 func (p *Process) Kill() error {
 	return p.cmd.Process.Kill()
 }
+```
+
+```mermaid
+stateDiagram-v2
+  [*] --> Created: New(name, args...)
+  Created --> Running: Start() — pipes attached
+  Running --> Running: Write() / Read stdout/stderr
+  Running --> Done: Wait()
+  Running --> Killed: Kill()
+  Done --> [*]
+  Killed --> [*]
 ```
 
 There is a tradeoff in keeping the library small: it does not pretend to know every caller's lifecycle policy. Some tools should wait for EOF. Some should kill the child on timeout. Some should drain stderr in a goroutine. The package gives me the pieces I need for those decisions without forcing a framework around them.

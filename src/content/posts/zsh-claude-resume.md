@@ -2,16 +2,35 @@
 author: Tran Cuong
 pubDatetime: 2026-06-10T10:00:00.000+07:00
 modDatetime:
-title: "A tiny zsh plugin to resume Claude Code sessions"
+title: "How I auto-suggest the right Claude Code session resume command in zsh"
 featured: false
 draft: false
 tags: ["zsh", "claude", "productivity"]
-description: "The small shell plugin I use so typing claude offers the right resume command."
+description: "The small zsh plugin I wrote so typing claude auto-suggests the right resume command for the current project."
 ---
 
 I restart Claude Code a lot. I jump between projects, close terminals, open new panes, and come back later with only a vague memory that there was already a useful session somewhere.
 
 The default workflow is fine once. Run `claude --resume`, pick from a list, continue. After doing that all day, it starts to feel like friction in the wrong place. I do not want to think about session IDs. I want the shell to know that I am standing inside a project directory and offer the most recent session for that directory.
+
+At a high level, the plugin turns a plain `claude` buffer into a project-aware resume suggestion.
+
+```mermaid
+flowchart LR
+  A[User types claude] --> B[autosuggestion strategy fires]
+  B --> C[_zcr_latest_session]
+  C --> D{cache hit?}
+  D -- yes --> E[return cached ID]
+  D -- no --> F[scan ~/.claude/projects/PWD]
+  F --> G{JSONL found?}
+  G -- yes --> H[return newest session ID]
+  G -- no --> I[scan ~/.claude/sessions]
+  I --> H
+  H --> J[show ghost text suggestion]
+  E --> J
+  J --> K[user presses Right arrow]
+  K --> L[claude --resume SESSION_ID]
+```
 
 That is what `zsh-claude-resume` does. It is intentionally small: pure zsh, standard POSIX tools, no `jq`, no Python helper, no daemon. The plugin has two jobs. First, it adds a zsh-autosuggestions strategy so typing `claude` can show the resume command as ghost text. Second, it registers tab completion for `claude --resume`.
 
@@ -45,6 +64,23 @@ if [[ -d "$project_dir" ]]; then
     latest=$(command ls -t "$project_dir" 2>/dev/null | command grep -vE "^(sessions-index\.json|memory)$" | command head -1)
     [[ -n "$latest" ]] && session_id="${latest%.jsonl}"
 fi
+```
+
+The session lookup is mostly a fast path with a fallback for the older storage layout.
+
+```mermaid
+flowchart TD
+  A[_zcr_latest_session called] --> B{cache valid?\nage < TTL}
+  B -- yes --> C[return cached session ID]
+  B -- no --> D[compute project_dir from PWD]
+  D --> E{~/.claude/projects/dir exists?}
+  E -- yes --> F[ls -t, skip index + memory files]
+  F --> G[strip .jsonl, return newest]
+  E -- no --> H[fall back to ~/.claude/sessions]
+  H --> I[find by project path prefix]
+  I --> G
+  G --> J[update cache]
+  J --> C
 ```
 
 The other small convenience is flag detection. I often run Claude with the same flags in a project, and the plugin scans recent zsh history to find the most common plain `claude ...` invocation. If that command was `claude --dangerously-skip-permissions`, the suggestion preserves it.
