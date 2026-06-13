@@ -65,13 +65,21 @@ Before invoking Codex, build a mental outline. Every post needs:
 
 1. **An opener that earns attention** — start with the specific pain point, the moment
    something broke, or the surprising finding. Never open with "Go is a great language
-   for..." or any hollow generalization.
+   for..." or any hollow generalization. Keep it to 1–2 short paragraphs.
 
-2. **Mermaid diagrams where a wall of text would form** — the blog supports Mermaid
-   natively via `rehype-mermaid`. Use diagrams to replace explanations of:
-   - **Flow / sequence** — how data or control moves through a system
-   - **State machines** — how a component transitions between states
-   - **Architecture** — how modules/services relate
+2. **A high-level overview diagram right after the opener** — before any detail, give
+   the reader the whole shape of the thing in one Mermaid diagram. This is the most
+   important structural rule: a reader should grasp the system at a glance, then read
+   the prose to fill in *why*. Put it high — within the first screenful, before the
+   first code block. Choose the form that captures the big picture:
+   - **Architecture / flow** — how the pieces connect and data moves through them
+   - **State machine** — the lifecycle a component moves through
+   - **Sequence** — the back-and-forth between actors over time
+
+   The blog renders Mermaid via `astro-mermaid`, and every diagram is **pan/zoomable**
+   (hover for zoom controls; an expand button opens a fullscreen view). So an overview
+   diagram can be richer than a slide would allow — readers zoom in on the part they
+   care about. Don't cram it to fit; let it be a true map.
 
    Mermaid goes in a fenced code block with language `mermaid`:
    ````markdown
@@ -86,13 +94,17 @@ Before invoking Codex, build a mental outline. Every post needs:
    ```
    ````
 
-3. **Real code snippets** from the actual repo — short, focused extracts that prove
+3. **More diagrams where a wall of text would form** — reuse the same tool deeper in
+   the post to replace any multi-sentence structural explanation (a flow, a state
+   transition, a dependency graph).
+
+4. **Real code snippets** from the actual repo — short, focused extracts that prove
    the point. Not toy examples.
 
-4. **Short paragraphs** — 2–4 sentences max. This is a technical blog, not a textbook.
+5. **Short paragraphs** — 2–4 sentences max. This is a technical blog, not a textbook.
    Write like you're explaining to a colleague over coffee.
 
-5. **A direct ending** — stop when the thought ends. No "in conclusion", no "I hope
+6. **A direct ending** — stop when the thought ends. No "in conclusion", no "I hope
    this was helpful".
 
 ---
@@ -127,9 +139,15 @@ description: "<one sentence, ≤120 chars, answers 'what will I learn?'>"
 WRITING RULES:
 - First-person voice (I, my, we)
 - 500–800 words
-- Open with the specific problem or moment — never a generic opener
-- Include 1–2 Mermaid diagrams (flowchart or stateDiagram-v2) where they replace
-  a multi-sentence structural explanation. Wrap in triple-backtick mermaid blocks.
+- Open with the specific problem or moment — never a generic opener (1–2 short paragraphs)
+- REQUIRED: right after the opener, before the first code block, place a high-level
+  OVERVIEW Mermaid diagram (architecture/flow, stateDiagram-v2, or sequenceDiagram)
+  that shows the whole system at a glance — the reader should get the big picture
+  before any detail. Diagrams render zoomable (hover controls + fullscreen expand),
+  so make the overview a complete map, not a cramped summary.
+- Use 1–2 more Mermaid diagrams deeper in the post wherever a multi-sentence
+  structural explanation would otherwise appear. Wrap all diagrams in triple-backtick
+  mermaid blocks.
 - Pull real code from the repo using gh api. Show the interesting part, not boilerplate.
 - Short paragraphs (2–4 sentences). Use ### headers for sections (renders italic).
 - No "in conclusion". End when the point is made.

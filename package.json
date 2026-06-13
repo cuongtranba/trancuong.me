@@ -33,6 +33,7 @@
     "satori": "^0.26.0",
     "sharp": "^0.34.5",
     "slugify": "^1.6.9",
+    "svg-pan-zoom": "^3.6.2",
     "tailwindcss": "^4.3.0"
   },
   "devDependencies": {
