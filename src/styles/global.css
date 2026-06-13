@@ -9,7 +9,7 @@
   * {
     @apply border-border outline-accent/75;
     scrollbar-width: auto;
-    scrollbar-color: var(--color-muted) transparent;
+    scrollbar-color: var(--gray-600) transparent;
   }
   a,
   button {
@@ -19,6 +19,10 @@
   [role="button"]:not(:disabled) {
     cursor: pointer;
   }
+  ::selection {
+    background: var(--selection-bg);
+    color: var(--foreground);
+  }
 }
 
 @utility max-w-app {
@@ -27,6 +31,11 @@
 
 @utility app-layout {
   @apply max-w-app mx-auto w-full px-4;
+}
+
+/* Brand signature: dashed-underline links that ember on hover */
+@utility link {
+  @apply hover:text-accent underline decoration-dashed underline-offset-4 transition-colors;
 }
 
 @utility active-nav {
