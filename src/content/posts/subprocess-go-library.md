@@ -13,12 +13,12 @@ I built `subprocess` because I kept needing the same thing in small Go tools: st
 
 ```mermaid
 flowchart LR
-  A[Parent process] -->|Write(input)| B[Process.stdin pipe]
+  A[Parent process] -->|"Write(input)"| B[Process.stdin pipe]
   B --> C[Child process]
   C --> D[Process.stdout pipe]
   C --> E[Process.stderr pipe]
-  D -->|Stdout()| A
-  E -->|Stderr()| A
+  D -->|"Stdout()"| A
+  E -->|"Stderr()"| A
 ```
 
 The standard library already gives Go a solid process API. What I wanted was a smaller surface around the pattern I used most often: long-running child processes where the parent and child keep talking after `Start`.
