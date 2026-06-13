@@ -19,7 +19,14 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # Run the full CI suite (lint, format, test, build) before anything ships.
+  # Gating the deploy on this means a broken push to main never reaches Pages.
+  ci:
+    name: CI checks
+    uses: ./.github/workflows/ci.yml
+
   build:
+    needs: ci
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
