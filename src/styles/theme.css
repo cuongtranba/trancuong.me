@@ -7,28 +7,66 @@
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
   --color-border: var(--border);
-  --font-app: var(--font-google-sans-code);
+  --font-app: var(--font-jetbrains-mono);
 }
 
-/* Light theme values */
+/* --- Neutral gray ramp (subtly warm to pair with ember) --- */
+:root {
+  --gray-50: #f6f6f5;
+  --gray-100: #ebeae9;
+  --gray-200: #d6d4d2;
+  --gray-300: #b3b0ad;
+  --gray-400: #8a8784;
+  --gray-500: #6a6764;
+  --gray-600: #4e4b49;
+  --gray-700: #383634;
+  --gray-800: #272524;
+  --gray-900: #1a1918;
+  --gray-950: #111010;
+
+  --ember-400: #ff8a3d;
+  --ember-500: #ff6b01;
+  --ember-600: #d2590a;
+
+  --white: #ffffff;
+  --black: #000000;
+}
+
+/* Dark theme — PRIMARY */
 :root,
+[data-theme="dark"] {
+  --background: var(--gray-950);
+  --surface: var(--gray-900);
+  --surface-2: var(--gray-800);
+
+  --foreground: var(--gray-100);
+  --muted: var(--gray-800);
+  --muted-foreground: var(--gray-400);
+  --border: var(--gray-800);
+  --border-strong: var(--gray-700);
+
+  --accent: var(--ember-500);
+  --accent-hover: var(--ember-400);
+  --accent-foreground: var(--white);
+
+  --selection-bg: rgba(255, 107, 1, 0.22);
+}
+
+/* Light theme — secondary */
 [data-theme="light"] {
   --background: #fdfdfd;
-  --foreground: #282728;
-  --accent: #006cac;
-  --accent-foreground: #ffffff;
-  --muted: #e6e6e6;
-  --muted-foreground: #6b7280;
-  --border: #ece9e9;
-}
+  --surface: var(--white);
+  --surface-2: var(--gray-50);
 
-/* Dark theme values */
-[data-theme="dark"] {
-  --background: #212737;
-  --foreground: #eaedf3;
-  --accent: #ff6b01;
-  --accent-foreground: #ffffff;
-  --muted: #343f60;
-  --muted-foreground: #afb9ca;
-  --border: #ab4b08;
+  --foreground: var(--gray-900);
+  --muted: var(--gray-100);
+  --muted-foreground: var(--gray-500);
+  --border: var(--gray-200);
+  --border-strong: var(--gray-300);
+
+  --accent: var(--ember-600);
+  --accent-hover: var(--ember-500);
+  --accent-foreground: var(--white);
+
+  --selection-bg: rgba(255, 107, 1, 0.18);
 }
