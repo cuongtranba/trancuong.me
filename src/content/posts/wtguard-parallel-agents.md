@@ -75,3 +75,14 @@ fi
 This is where `wtguard` fits into my personal workflow. Docker agents can coordinate through the shared upstream, but my own terminal still needs a hard rule: never commit directly to `main`. The guard belongs at the Git boundary because that is the last reliable place before a mistake becomes shared state.
 
 I like this pattern because it does not depend on perfect behavior from agents or humans. Agents get isolated workspaces. Tasks get lock files. Pushes go through a retry/rebase path. Humans get a pre-commit guard on `main`. None of those pieces is clever by itself, but together they turn parallel agent work from "hope nothing collides" into a workflow I can actually leave running.
+
+```mermaid
+flowchart LR
+  A[agent-1 worktree] --> B[feature/task-1]
+  C[agent-2 worktree] --> D[feature/task-2]
+  E[agent-3 worktree] --> F[feature/task-3]
+  B & D & F --> G[(bare upstream)]
+  G -->|pre-commit guard| H{commit to main?}
+  H -- rejected --> I[wtguard blocks]
+  H -- allowed --> J[merge via PR]
+```
