@@ -53,6 +53,9 @@ importers:
       slugify:
         specifier: ^1.6.9
         version: 1.6.9
+      svg-pan-zoom:
+        specifier: ^3.6.2
+        version: 3.6.2
       tailwindcss:
         specifier: ^4.3.0
         version: 4.3.0
@@ -2998,6 +3001,9 @@ packages:
 
   suf-log@2.5.3:
     resolution: {integrity: sha512-KvC8OPjzdNOe+xQ4XWJV2whQA0aM1kGVczMQ8+dStAO6KfEB140JEVQ9dE76ONZ0/Ylf67ni4tILPJB41U0eow==}
+
+  svg-pan-zoom@3.6.2:
+    resolution: {integrity: sha512-JwnvRWfVKw/Xzfe6jriFyfey/lWJLq4bUh2jwoR5ChWQuQoOH8FEh1l/bEp46iHHKHEJWIyFJETbazraxNWECg==}
 
   svgo@4.0.1:
     resolution: {integrity: sha512-XDpWUOPC6FEibaLzjfe0ucaV0YrOjYotGJO1WpF0Zd+n6ZGEQUsSugaoLq9QkEZtAfQIxT42UChcssDVPP3+/w==}
@@ -6911,6 +6917,8 @@ snapshots:
   suf-log@2.5.3:
     dependencies:
       s.color: 0.0.15
+
+  svg-pan-zoom@3.6.2: {}
 
   svgo@4.0.1:
     dependencies:

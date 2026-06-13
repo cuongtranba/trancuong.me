@@ -63,4 +63,11 @@ const structuredData = {
   </Fragment>
 
   <slot />
+
+  <script>
+    // Makes rendered Mermaid diagrams pan/zoomable (inline toolbar + an
+    // expand-to-fullscreen overlay). Re-binds across ClientRouter navigations
+    // and astro-mermaid theme re-renders.
+    import "@/scripts/mermaidZoom";
+  </script>
 </Layout>
