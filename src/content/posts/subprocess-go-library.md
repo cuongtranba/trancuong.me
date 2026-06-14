@@ -24,6 +24,7 @@ flowchart LR
 The standard library already gives Go a solid process API. What I wanted was a smaller surface around the pattern I used most often: long-running child processes where the parent and child keep talking after `Start`.
 
 > **Key Takeaways**
+>
 > - A four-field struct (`cmd`, `stdin`, `stdout`, `stderr`) is the entire state model — close enough to `exec.Cmd` to be predictable, narrow enough to remove repeated setup.
 > - Startup is the most error-prone step; centralizing all three pipe creations in `Start()` means callers never forget one.
 > - `Stdout()` and `Stderr()` return `io.Reader`, not `[]byte` — callers choose their own parsing strategy without the library forcing one.

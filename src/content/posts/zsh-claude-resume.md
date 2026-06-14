@@ -14,6 +14,7 @@ I restart Claude Code a lot. I jump between projects, close terminals, open new 
 The default workflow is fine once. Run `claude --resume`, pick from a list, continue. After doing that all day, it starts to feel like friction in the wrong place. I do not want to think about session IDs. I want the shell to know that I am standing inside a project directory and offer the most recent session for that directory.
 
 > **Key Takeaways**
+>
 > - The plugin adds a custom `zsh-autosuggestions` strategy so typing `claude` shows the correct `--resume SESSION_ID` as ghost text — press right arrow to accept.
 > - A five-second TTL cache prevents the session lookup from running on every keystroke.
 > - Flag detection scans your zsh history so the suggestion preserves flags you use regularly, like `--dangerously-skip-permissions`.

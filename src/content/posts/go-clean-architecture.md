@@ -14,6 +14,7 @@ I do not reach for clean architecture because I like diagrams. I reach for it wh
 That is the reason behind `go-scaffolding`. It is a template for services where the domain is kept boring and central, and everything external is pushed to the edge.
 
 > **Key Takeaways**
+>
 > - Feature-slice layout keeps domain, ports, service, and adapters co-located under one `internal/<feature>/` path — changing user behavior means staying in one directory.
 > - The domain package contains zero framework imports (no Gin, no GORM), so core business rules are testable with plain Go and a mock repository.
 > - Ports are Go interfaces owned by the feature, not by the adapter. Swapping PostgreSQL for another backend touches exactly one adapter directory.

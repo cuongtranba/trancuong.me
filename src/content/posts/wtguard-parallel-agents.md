@@ -14,6 +14,7 @@ The first time I tried running multiple Claude Code sessions against the same re
 That does not scale. Two agents editing the same checkout is not collaboration. It is a race condition with a chat interface.
 
 > **Key Takeaways**
+>
 > - Each agent gets its own Docker container with a private `/workspace` clone of a shared bare upstream, so file system state never collides between agents.
 > - Agents coordinate through Git and lock files, not through each other. A failed push means another agent claimed the task first.
 > - `wtguard` installs a pre-commit hook on `main` so even a human working in the same repo cannot accidentally commit there directly.
