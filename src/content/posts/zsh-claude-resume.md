@@ -1,17 +1,24 @@
 ---
 author: Tran Cuong
 pubDatetime: 2026-06-10T10:00:00.000+07:00
-modDatetime:
+modDatetime: 2026-06-14T10:00:00.000+07:00
 title: "How I auto-suggest the right Claude Code session resume command in zsh"
 featured: false
 draft: false
 tags: ["zsh", "claude", "productivity"]
-description: "The small zsh plugin I wrote so typing claude auto-suggests the right resume command for the current project."
+description: "A small zsh plugin that turns typing 'claude' into a project-aware session resume suggestion — pure zsh, no jq, no daemon, with a TTL cache so autosuggestion hooks stay fast."
 ---
 
 I restart Claude Code a lot. I jump between projects, close terminals, open new panes, and come back later with only a vague memory that there was already a useful session somewhere.
 
 The default workflow is fine once. Run `claude --resume`, pick from a list, continue. After doing that all day, it starts to feel like friction in the wrong place. I do not want to think about session IDs. I want the shell to know that I am standing inside a project directory and offer the most recent session for that directory.
+
+> **Key Takeaways**
+> - The plugin adds a custom `zsh-autosuggestions` strategy so typing `claude` shows the correct `--resume SESSION_ID` as ghost text — press right arrow to accept.
+> - A five-second TTL cache prevents the session lookup from running on every keystroke.
+> - Flag detection scans your zsh history so the suggestion preserves flags you use regularly, like `--dangerously-skip-permissions`.
+
+## How it works
 
 At a high level, the plugin turns a plain `claude` buffer into a project-aware resume suggestion.
 
@@ -32,7 +39,9 @@ flowchart LR
   K --> L[claude --resume SESSION_ID]
 ```
 
-That is what `zsh-claude-resume` does. It is intentionally small: pure zsh, standard POSIX tools, no `jq`, no Python helper, no daemon. The plugin has two jobs. First, it adds a zsh-autosuggestions strategy so typing `claude` can show the resume command as ghost text. Second, it registers tab completion for `claude --resume`.
+`zsh-claude-resume` is intentionally small: pure zsh, standard POSIX tools, no `jq`, no Python helper, no daemon. It has two jobs: add a `zsh-autosuggestions` strategy so typing `claude` shows the resume command as ghost text, and register tab completion for `claude --resume`.
+
+## The session lookup
 
 The core lookup starts with the current directory. Claude stores project sessions under a path derived from `PWD`, so the plugin turns slashes and dots into dashes and looks inside `~/.claude/projects/...`.
 
@@ -54,7 +63,9 @@ _zcr_latest_session() {
     local session_id
 ```
 
-I added the cache because autosuggestion hooks run constantly while typing. A five-second TTL is enough to avoid lag without making the shell feel stale.
+The cache exists because autosuggestion hooks run constantly while typing. A five-second TTL avoids lag without making the shell feel stale.
+
+## Handling both storage layouts
 
 The plugin handles both storage layouts I have seen: newer JSONL files under the project directory, and older PID session files under `~/.claude/sessions`. The first path is cheap:
 
@@ -65,8 +76,6 @@ if [[ -d "$project_dir" ]]; then
     [[ -n "$latest" ]] && session_id="${latest%.jsonl}"
 fi
 ```
-
-The session lookup is mostly a fast path with a fallback for the older storage layout.
 
 ```mermaid
 flowchart TD
@@ -83,7 +92,9 @@ flowchart TD
   J --> C
 ```
 
-The other small convenience is flag detection. I often run Claude with the same flags in a project, and the plugin scans recent zsh history to find the most common plain `claude ...` invocation. If that command was `claude --dangerously-skip-permissions`, the suggestion preserves it.
+## Flag detection
+
+I often run Claude with the same flags in a project, and the plugin scans recent zsh history to find the most common plain `claude ...` invocation. If that command was `claude --dangerously-skip-permissions`, the suggestion preserves it.
 
 ```zsh
 most_common=$(print -r -- "$hist_source" | \
@@ -93,6 +104,8 @@ most_common=$(print -r -- "$hist_source" | \
     LC_ALL=C command sort | LC_ALL=C command uniq -c | LC_ALL=C command sort -rn | \
     command head -1 | command sed 's/^ *[0-9]* *//')
 ```
+
+## The autosuggestion strategy
 
 The autosuggestion itself is just string matching. If the current buffer starts with `claude`, build the best resume candidate and expose it as `suggestion`.
 
@@ -116,7 +129,9 @@ _zsh_autosuggest_strategy_claude_resume() {
 }
 ```
 
-Finally, setup is just registration:
+## Setup
+
+Setup is just registration — prepend the strategy to `zsh-autosuggestions` and wire up tab completion:
 
 ```zsh
 _zcr_detect_flags
@@ -129,3 +144,23 @@ compdef _zcr_complete_claude claude
 ```
 
 The result is the kind of tool I like most: it removes one repeated thought. I type `claude`, press right arrow when the suggestion looks right, and I am back in the session that already had the context.
+
+---
+
+## FAQ
+
+**Does this require `jq` or any external dependencies?**
+
+No. The plugin uses only pure zsh and standard POSIX tools (`ls`, `grep`, `sed`, `sort`, `uniq`). No `jq`, no Python helper, no background daemon.
+
+**What if I have no session for the current project yet?**
+
+The lookup returns nothing and the suggestion is empty. You get the same experience as plain `claude` with no plugin installed — no errors, no noise.
+
+**Why a TTL cache instead of running the lookup once at shell startup?**
+
+You change directories constantly. A startup-only lookup would show the session for whatever directory you were in when the shell started. The per-`PWD` cache with a short TTL gives you the right session for wherever you are now, without paying the lookup cost on every keystroke.
+
+**What if I use the older `~/.claude/sessions` layout?**
+
+The plugin falls back automatically. It checks the newer project-directory JSONL layout first; if that directory does not exist, it scans `~/.claude/sessions` for a session whose path prefix matches your current `PWD`.
