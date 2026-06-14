@@ -1,12 +1,12 @@
 ---
 author: Tran Cuong
 pubDatetime: 2026-06-13T10:00:00.000+07:00
-modDatetime:
+modDatetime: 2026-06-14T10:00:00.000+07:00
 title: "How I wrapped os/exec in Go for long-running subprocess communication"
 featured: false
 draft: false
 tags: ["go", "open-source"]
-description: "How I built a thin Go wrapper over os/exec for bidirectional I/O with long-running child processes."
+description: "A walkthrough of subprocess, a thin Go wrapper over os/exec that handles bidirectional I/O with long-running child processes without rewriting the same pipe plumbing in every project."
 ---
 
 I built `subprocess` because I kept needing the same thing in small Go tools: start a command, write to its stdin, read from stdout and stderr, and shut it down without turning every caller into a pile of `os/exec` plumbing.
@@ -23,7 +23,13 @@ flowchart LR
 
 The standard library already gives Go a solid process API. What I wanted was a smaller surface around the pattern I used most often: long-running child processes where the parent and child keep talking after `Start`.
 
-### The Core Shape
+> **Key Takeaways**
+>
+> - A four-field struct (`cmd`, `stdin`, `stdout`, `stderr`) is the entire state model — close enough to `exec.Cmd` to be predictable, narrow enough to remove repeated setup.
+> - Startup is the most error-prone step; centralizing all three pipe creations in `Start()` means callers never forget one.
+> - `Stdout()` and `Stderr()` return `io.Reader`, not `[]byte` — callers choose their own parsing strategy without the library forcing one.
+
+## The core shape
 
 The library is intentionally thin. The important state is the command plus the three pipes that make bidirectional communication possible:
 
@@ -36,7 +42,7 @@ type Process struct {
 }
 ```
 
-That is the whole bias of the package. It does not try to invent a scheduler or a process supervisor. It keeps the `exec.Cmd` model close enough that the behavior is still easy to reason about, then hides the repetitive setup code that I do not want to rewrite in every project.
+That is the whole bias of the package. It does not try to invent a scheduler or a process supervisor. It keeps the `exec.Cmd` model close enough that the behavior is still easy to reason about, then hides the repetitive setup code I do not want to rewrite in every project.
 
 The constructor follows the same mental model as `exec.Command`: a program name and optional arguments.
 
@@ -48,9 +54,9 @@ func New(name string, args ...string) *Process {
 }
 ```
 
-This keeps the call site boring, which is exactly what I want from infrastructure code. If I need to run `python`, `node`, `bash`, or a project-specific binary, the wrapper should not make that feel like a new domain.
+This keeps the call site boring, which is exactly what I want from infrastructure code. Running `python`, `node`, `bash`, or a project-specific binary should not feel like a new domain.
 
-### Starting With Pipes
+## Starting with pipes
 
 The most error-prone part is startup. All three pipes must be created before the process starts, and each step can fail. The library keeps that sequence in one place:
 
@@ -79,7 +85,7 @@ func (p *Process) Start() error {
 
 I like this kind of abstraction because it removes ceremony without hiding the operating system. A subprocess can still fail to start. Pipes can still fail. The caller still has to decide what failure means. The library just makes the happy path and the cleanup path more consistent.
 
-### Communication As The Main API
+## Communication as the main API
 
 The reason this package exists is not one-shot command execution. Go already has `cmd.Output()` and `cmd.CombinedOutput()` for that. The useful case is when a process stays alive and accepts input over time.
 
@@ -92,7 +98,7 @@ func (p *Process) Write(input string) error {
 
 That small method changes the feeling of the caller. Instead of carrying a `WriteCloser` around or leaking details of how the process was started, the caller talks to the child through the process object.
 
-Reading follows the same idea. The process exposes stdout and stderr as streams, so callers can choose whether they want scanners, readers, goroutines, or their own parsing logic:
+Reading follows the same idea. The process exposes stdout and stderr as streams, so callers choose whether they want scanners, readers, goroutines, or their own parsing logic:
 
 ```go
 func (p *Process) Stdout() io.Reader {
@@ -104,9 +110,9 @@ func (p *Process) Stderr() io.Reader {
 }
 ```
 
-I prefer returning `io.Reader` here because it keeps the package flexible. A line-oriented command can use `bufio.Scanner`. A protocol-like command can use a custom decoder. Tests can consume the stream directly.
+Returning `io.Reader` keeps the package flexible. A line-oriented command can use `bufio.Scanner`. A protocol-like command can use a custom decoder. Tests can consume the stream directly.
 
-### Keeping Shutdown Explicit
+## Keeping shutdown explicit
 
 Subprocess code becomes painful when lifecycle is vague. I wanted the package to make shutdown visible, not magical.
 
@@ -131,6 +137,26 @@ stateDiagram-v2
   Killed --> [*]
 ```
 
-There is a tradeoff in keeping the library small: it does not pretend to know every caller's lifecycle policy. Some tools should wait for EOF. Some should kill the child on timeout. Some should drain stderr in a goroutine. The package gives me the pieces I need for those decisions without forcing a framework around them.
+There is a tradeoff in keeping the library small: it does not pretend to know every caller's lifecycle policy. Some tools should wait for EOF. Some should kill the child on timeout. Some should drain stderr in a goroutine. The package gives you the pieces you need for those decisions without forcing a framework around them.
 
 That is the kind of Go library I enjoy maintaining: a narrow wrapper over a real primitive, written to make the common case readable while leaving the sharp edges visible enough that I do not forget they exist.
+
+---
+
+## FAQ
+
+**Why not just use `cmd.Output()` or `cmd.CombinedOutput()`?**
+
+Those functions block until the process exits and capture all output at once. They work well for short-lived commands. This library targets long-running processes where you send multiple inputs and read responses over the lifetime of one process.
+
+**What happens if I call `Write` before `Start`?**
+
+The `stdin` field will be nil, so `Write` will panic on the nil `WriteCloser`. Call `Start` first. The library does not guard against this because adding a check would hide a programming error that should fail loudly.
+
+**How do I drain stderr without blocking my main loop?**
+
+Spin a goroutine: `go io.Copy(io.Discard, p.Stderr())` if you do not care about the content, or `go bufio.NewScanner(p.Stderr()).Scan()` if you want to log it. The library leaves this decision to the caller deliberately.
+
+**Why return `io.Reader` instead of `string` or `[]byte`?**
+
+Different callers need different things. A streaming protocol needs a custom decoder. A line-based tool needs a `bufio.Scanner`. Returning `io.Reader` gives callers that choice without the library forcing an allocation strategy.
