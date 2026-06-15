@@ -1,42 +1,32 @@
 ---
 author: Tran Cuong
 pubDatetime: 2026-06-13T10:00:00.000+07:00
-modDatetime: 2026-06-14T10:00:00.000+07:00
+modDatetime: 2026-06-15T10:00:00.000+07:00
 title: "How I stopped parallel Claude Code agents from trampling main with wtguard"
 featured: true
 draft: false
 tags: ["go", "git", "agents"]
-description: "How I use git worktrees, Docker isolation, and a pre-commit guard called wtguard to run parallel Claude Code agents against the same repo without stepping on each other."
+description: "How I run parallel Claude Code agents on one repo with Docker isolation, git coordination, and the wtguard commit guard"
 ---
 
-The first time I tried running multiple Claude Code sessions against the same repository, the failure mode was obvious: they all had the same working tree, the same index, and the same idea that `main` was a reasonable place to put work.
+The first time I ran multiple Claude Code sessions against the same repository, the failure mode was obvious: they shared the same working tree, the same index, and the same idea that `main` was a reasonable place to put work.
 
-That does not scale. Two agents editing the same checkout is not collaboration. It is a race condition with a chat interface.
-
-> **Key Takeaways**
->
-> - Each agent gets its own Docker container with a private `/workspace` clone of a shared bare upstream, so file system state never collides between agents.
-> - Agents coordinate through Git and lock files, not through each other. A failed push means another agent claimed the task first.
-> - `wtguard` installs a pre-commit hook on `main` so even a human working in the same repo cannot accidentally commit there directly.
-
-## The two-part fix
-
-My fix has two parts. `agent-teams-setup` gives each agent an isolated workspace and a shared upstream. `wtguard` is the seatbelt I want in every local flow: a tiny Go CLI that installs a pre-commit guard so direct commits to `main` are rejected before they become history.
+That does not scale. Two agents editing the same checkout is not collaboration. It is a race condition with a chat interface. My fix has two halves — give each agent an isolated workspace, and put a hard guard at the one boundary where mistakes become shared history.
 
 ```mermaid
 flowchart LR
-  A[agent-1 worktree] --> B[feature/task-1]
-  C[agent-2 worktree] --> D[feature/task-2]
-  E[agent-3 worktree] --> F[feature/task-3]
-  B & D & F --> G[(bare upstream)]
-  G -->|pre-commit guard| H{commit to main?}
-  H -- rejected --> I[wtguard blocks]
-  H -- allowed --> J[merge via PR]
+  A1[agent-1 container] --> U[(shared bare upstream)]
+  A2[agent-2 container] --> U
+  A3[agent-3 container] --> U
+  W[my worktree] --> G{"commit to main?"}
+  G -->|blocked| W
+  G -->|feature branch| U
+  U --> PR[merge via PR]
 ```
 
-## Isolated workspaces via Docker
+### Isolated workspaces via Docker
 
-The orchestration side is deliberately boring. `agent-teams-setup` creates a bare repo, seeds a task list, then runs agents in separate Docker containers. Each container clones the same upstream into its own `/workspace`, so the file system state is private even though the Git history is shared.
+`agent-teams-setup` runs each agent in its own Docker container. On startup the container configures Git and clones the shared upstream into a private `/workspace`, so the file system state is isolated even though the history is shared.
 
 ```bash
 # scripts/agent-entrypoint.sh
@@ -50,28 +40,11 @@ git clone /upstream /workspace
 cd /workspace
 ```
 
-That small separation matters. An agent can run formatters, create temporary files, and inspect its own dirty state without stepping on another agent's index.
+`spawn-agents.sh` turns the team config into containers, mounting the same `/upstream` into each one. That small separation matters: an agent can run formatters, write temp files, and inspect its own dirty state without touching another agent's index.
 
-The team composition comes from config, then `spawn-agents.sh` turns it into containers:
+### Coordinating through Git, not each other
 
-```bash
-CLAUDE_MODEL="$(config_get "agents.model" "${CLAUDE_MODEL:-claude-sonnet-4-5-20250929}")"
-SESSION_TIMEOUT="$(config_get "agents.session_timeout" "${SESSION_TIMEOUT:-3600}")"
-UPSTREAM_DIR="$(config_get "project.upstream_dir" "${UPSTREAM_DIR:-/tmp/agent-upstream}")"
-
-docker run -d \
-    --name "$AGENT_NAME" \
-    -e AGENT_ID="$AGENT_NAME" \
-    -e AGENT_ROLE="$role" \
-    -e CLAUDE_MODEL="$CLAUDE_MODEL" \
-    -v "${UPSTREAM_DIR}:/upstream" \
-    -v "${ROOT_DIR}/prompts/agent-prompt.md:/config/agent-prompt.md:ro" \
-    "${IMAGE_NAME}:latest"
-```
-
-## Coordinating through Git, not each other
-
-The agents do not coordinate by talking to each other. They coordinate through Git and files. The prompt tells them to claim work by creating a lock file under `current_tasks/`, commit it, and push. If the push fails, somebody else probably claimed the task first.
+The agents never talk to each other directly. They coordinate through Git. To claim work, an agent writes a lock file under `current_tasks/`, commits it, and pushes. If the push fails, someone else claimed it first — Git push atomicity is the lock.
 
 ```mermaid
 stateDiagram-v2
@@ -85,13 +58,7 @@ stateDiagram-v2
   WorkSession --> [*]
 ```
 
-```bash
-git add current_tasks/<task_name>.txt
-git commit -m "[agent-{ID}] claim: <task_name>"
-git push origin main
-```
-
-The loop also treats sync as a normal operation, not an exceptional one. Before each session it pulls. After a session, if there are changes, it commits and calls the sync helper.
+The loop also treats sync as a normal operation, not an exceptional one. It pulls before each session, and falls back to a hard reset only when a rebase cannot apply cleanly.
 
 ```bash
 git pull --rebase origin main 2>/dev/null || {
@@ -107,28 +74,34 @@ if [ -n "$(git status --porcelain 2>/dev/null)" ]; then
 fi
 ```
 
-## The pre-commit guard
+### The guard at the git boundary
 
-This is where `wtguard` fits into my personal workflow. Docker agents can coordinate through the shared upstream, but my own terminal still needs a hard rule: never commit directly to `main`. The guard belongs at the Git boundary because that is the last reliable place before a mistake becomes shared state.
+Docker agents coordinate through the shared upstream, but my own terminal still needs one hard rule: never commit directly to `main`. A plain pre-commit hook is not enough — an agent (or I) can pass `--no-verify`, delete the hook, or work in a fresh clone. So `wtguard` stacks three independent layers behind one install:
 
-I like this pattern because it does not depend on perfect behavior from agents or humans. Agents get isolated workspaces. Tasks get lock files. Pushes go through a retry/rebase path. Humans get a pre-commit guard on `main`. None of those pieces is clever by itself, but together they turn parallel agent work from "hope nothing collides" into a workflow I can actually leave running.
+1. A `git` proxy placed first on `PATH`, which catches `--no-verify` and a missing hook.
+2. The pre-commit hook itself, for when the proxy is bypassed (`/usr/bin/git` called directly).
+3. Opt-in GitHub branch protection — server-side, and unbypassable.
 
----
+Each layer alone is bypassable. All three together are not. What keeps them honest is that they all ask the same question, answered by one pure function with no Git calls of its own:
 
-## FAQ
+```go
+// internal/guard/guard.go — the single source of truth,
+// called by the proxy and the pre-commit hook
+func Decide(r Rule) Decision {
+	if r.BypassEnv {
+		return Decision{Block: false, Reason: "bypass env set"}
+	}
+	if r.Detached {
+		return Decision{Block: false, Reason: "detached HEAD"}
+	}
+	if !slices.Contains(r.ProtectedList, r.Branch) {
+		return Decision{Block: false, Reason: "branch not protected"}
+	}
+	// default policy "always": refuse any commit to a protected branch
+	return Decision{Block: true, Reason: "branch is protected"}
+}
+```
 
-**Why Docker containers instead of plain git worktrees?**
+The caller precomputes the `Rule` — branch, detached state, worktree count, protected list — so `Decide` stays a pure function I can unit-test without a repo. A second policy, `worktree-active`, only blocks when an extra worktree is open, for people who want the guard to step aside when they are genuinely working alone.
 
-Git worktrees give you separate working trees but share the same host file system. Two agents could still clobber each other's build artifacts, temporary files, or tool caches. Docker gives each agent a private file system namespace so there is no overlap at all.
-
-**What stops two agents from claiming the same task?**
-
-Git push atomicity. Both agents write a lock file and commit it locally, but only the first push succeeds. The second agent gets a non-fast-forward rejection, pulls, sees the lock file already committed, and moves on to the next task.
-
-**Why does `wtguard` block commits to main instead of using branch protection?**
-
-Branch protection rules live on the remote (GitHub, GitLab). `wtguard` installs a local pre-commit hook that blocks the mistake before it even becomes a commit, so it works on local repos, bare upstreams, and any host. The two are complementary.
-
-**How do agents handle merge conflicts?**
-
-The entrypoint sets `rerere.enabled true`, so Git records resolved conflicts and reuses the resolution automatically. The rebase-on-pull path (`pull.rebase true`) keeps history linear and reduces conflict surface compared to merge commits.
+None of these pieces is clever by itself. Agents get isolated workspaces, tasks get lock files, pushes go through a rebase path, and my own commits hit a guard at the git boundary. Together they turn parallel agent work from "hope nothing collides" into something I can leave running. It is one more small piece of the Claude Code setup I keep sharpening, like [the zsh plugin that resumes the right session](/posts/zsh-claude-resume).
