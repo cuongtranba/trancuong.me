@@ -4,14 +4,15 @@ description: >
   Write a new blog post for trancuong.me. Trigger whenever the user wants to write,
   draft, create, or add a post — including "new post", "write about X", "post about
   my repo", "blog post idea", or "write something about [topic]". Handles topic
-  sharpening, long-tail angle, structure planning with Mermaid diagrams, and delegates
-  the actual writing to the Codex agent which pulls real code from GitHub repos.
+  sharpening, long-tail angle, structure planning with Mermaid diagrams, and writes
+  the post directly — pulling real code from the author's GitHub repos via `gh`.
 user-invocable: true
 ---
 
 # Blog Writer — trancuong.me
 
-You are helping Tran Cuong write a post for his personal technical blog. Posts live
+You are helping Tran Cuong write a post for his personal technical blog. You write the
+post yourself — read the real code, plan the structure, and produce the file. Posts live
 at `src/content/posts/<slug>.md` and must meet this schema:
 
 ```yaml
@@ -61,7 +62,7 @@ Pick 2–3 candidates, present them, and ask which to write about.
 
 ## Step 2 — Plan the post structure
 
-Before invoking Codex, build a mental outline. Every post needs:
+Build a mental outline before you write a word. Every post needs:
 
 1. **An opener that earns attention** — start with the specific pain point, the moment
    something broke, or the surprising finding. Never open with "Go is a great language
@@ -109,77 +110,72 @@ Before invoking Codex, build a mental outline. Every post needs:
 
 ---
 
-## Step 3 — Build the Codex prompt
+## Step 3 — Pull real code from the repo
 
-Construct this exact prompt (fill in placeholders):
+Credibility comes from showing code that actually exists. Read it from the repo before
+you quote it — never invent or paraphrase a snippet from memory.
 
-```
-Write a blog post for trancuong.me.
+Explore the tree, then read the files you need:
 
-TOPIC: <specific angle, not just a subject>
-REPOS: <cuongtranba/repo-name> — explore with:
-  gh api /repos/cuongtranba/<name>/git/trees/HEAD?recursive=1 --jq '.tree[].path'
-  gh api /repos/cuongtranba/<name>/contents/<path> --jq '.content' | base64 -d
-TAGS: <1-3 kebab-case tags>
-SLUG: <kebab-case-filename-no-date>
-FEATURED: false
+```bash
+# list every file in the repo
+gh api /repos/cuongtranba/<name>/git/trees/HEAD?recursive=1 --jq '.tree[].path'
 
-FRONTMATTER (use exactly):
----
-author: Tran Cuong
-pubDatetime: <today ISO 8601 +07:00>
-modDatetime:
-title: "<title — should read like a search query someone would actually type>"
-featured: false
-draft: false
-tags: [<tags>]
-description: "<one sentence, ≤120 chars, answers 'what will I learn?'>"
----
-
-WRITING RULES:
-- First-person voice (I, my, we)
-- 500–800 words
-- Open with the specific problem or moment — never a generic opener (1–2 short paragraphs)
-- REQUIRED: right after the opener, before the first code block, place a high-level
-  OVERVIEW Mermaid diagram (architecture/flow, stateDiagram-v2, or sequenceDiagram)
-  that shows the whole system at a glance — the reader should get the big picture
-  before any detail. Diagrams render zoomable (hover controls + fullscreen expand),
-  so make the overview a complete map, not a cramped summary.
-- Use 1–2 more Mermaid diagrams deeper in the post wherever a multi-sentence
-  structural explanation would otherwise appear. Wrap all diagrams in triple-backtick
-  mermaid blocks.
-- Pull real code from the repo using gh api. Show the interesting part, not boilerplate.
-- Short paragraphs (2–4 sentences). Use ### headers for sections (renders italic).
-- No "in conclusion". End when the point is made.
-- The title should be what someone would actually type into Google:
-  e.g. "How I stopped parallel agents from trampling main with wtguard"
-  not "Git worktrees and parallel agents"
-
-SAVE TO: /home/cuong/repo/trancuong.me/src/content/posts/<slug>.md
+# read a specific file
+gh api /repos/cuongtranba/<name>/contents/<path> --jq '.content' | base64 -d
 ```
 
+Pick the interesting part — the struct that holds the state, the function where the
+decision happens, the line that fixed the bug. Skip boilerplate, imports, and getters
+that prove nothing. A reader should be able to point at each snippet and say "that is
+the idea".
+
 ---
 
-## Step 4 — Invoke Codex
+## Step 4 — Write the post
 
-Use the `Agent` tool with **`subagent_type: "codex:codex-rescue"`**.
+Write the file at `src/content/posts/<slug>.md` (kebab-case slug, no date in the name).
+Apply the structure from Step 2 and these rules:
 
-Start the prompt with `--fresh` so Codex opens a new thread.
+- **Voice**: first person (I, my, we). Conversational, like explaining to a colleague.
+- **Length**: 500–800 words.
+- **Opener**: the specific problem or moment — never a generic intro (1–2 short paragraphs).
+- **Overview diagram**: REQUIRED right after the opener, before the first code block — an
+  architecture/flow, `stateDiagram-v2`, or `sequenceDiagram` that shows the whole system
+  at a glance. Diagrams render zoomable (hover controls + fullscreen expand), so make the
+  overview a complete map, not a cramped summary.
+- **More diagrams**: 1–2 deeper in the post wherever a multi-sentence structural
+  explanation would otherwise appear. Wrap every diagram in a triple-backtick `mermaid` block.
+- **Code**: real extracts pulled in Step 3 — the interesting part, not boilerplate.
+- **Paragraphs**: short (2–4 sentences). Use `###` headers for sections.
+- **Ending**: stop when the point is made. No "in conclusion".
+- **Title**: what someone would actually type into Google, e.g.
+  "How I stopped parallel agents from trampling main with wtguard", not
+  "Git worktrees and parallel agents".
+
+Fill the frontmatter from the schema at the top: today's date in `+07:00`, an empty
+`modDatetime` on first write, accurate kebab-case tags, and a `description` of ≤120
+characters that answers "what will I learn?".
 
 ---
 
 ## Step 5 — Confirm and report
 
-After Codex completes:
+After writing the file:
 
 ```bash
-ls /home/cuong/repo/trancuong.me/src/content/posts/<slug>.md && \
-  wc -w /home/cuong/repo/trancuong.me/src/content/posts/<slug>.md
+ls src/content/posts/<slug>.md && wc -w src/content/posts/<slug>.md
+```
+
+Then run the Mermaid parse test so a bad diagram never reaches the build:
+
+```bash
+pnpm vitest run src/scripts/mermaidDiagrams.test.ts
 ```
 
 Report back: **title · slug · tags · word count · whether diagrams were included**.
 
-If the file is missing, say so and offer to retry.
+If the file is missing or the test fails, say so and fix it before claiming done.
 
 ---
 
@@ -195,6 +191,9 @@ stateDiagram-v2       # state machines, lifecycle
 graph TD              # dependency graphs, module structure
 ```
 
+Edge labels containing parentheses must be quoted, or the parser fails:
+`A -->|"Write(input)"| B`.
+
 **Use diagrams to replace this kind of prose:**
 > "First the request comes in to the handler, which validates it, then passes it to
 > the domain layer, which calls the store port, which the Postgres adapter implements."
@@ -203,7 +202,7 @@ That sentence is a flowchart waiting to happen. Draw it instead.
 
 ---
 
-## SEO checklist (Codex should follow these)
+## SEO checklist
 
 - [ ] Title contains the long-tail phrase someone would search (4+ words, specific)
 - [ ] Description answers "what will I learn?" in ≤120 chars
