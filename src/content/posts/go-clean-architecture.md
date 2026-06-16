@@ -1,17 +1,17 @@
 ---
 author: Tran Cuong
 pubDatetime: 2026-06-07T10:00:00.000+07:00
-modDatetime: 2026-06-15T10:00:00.000+07:00
-title: "How I structure Go services with hexagonal architecture and feature slices"
+modDatetime: 2026-06-16T10:00:00.000+07:00
+title: "Hexagonal Go: feature slices that test without a database"
 featured: false
 draft: false
 tags: ["go", "architecture"]
-description: "How I structure Go services with hexagonal architecture and feature slices — domain logic that stays transport-agnostic and testable without a database."
+description: "A Go service layout that keeps domain logic transport-agnostic — testable with a mock repo, no database booted."
 ---
 
-I do not reach for clean architecture because I like diagrams. I reach for it when I expect a Go service to live long enough that the first version of its database, transport, and package layout will eventually be wrong.
+I do not reach for clean architecture because I like diagrams. I reach for it when a Go service will live long enough that its first database, transport, and package layout all turn out wrong.
 
-That is the idea behind `go-scaffolding`: keep the domain boring and central, and push everything external to the edge. The whole layout exists to enforce one rule — business code should not know whether it is being called by HTTP, gRPC, a CLI, or a worker.
+That is `go-scaffolding`: keep the domain central, push everything external to the edge. One rule — business code never knows whether HTTP, gRPC, a CLI, or a worker called it.
 
 ```mermaid
 flowchart LR
@@ -22,13 +22,11 @@ flowchart LR
   Postgres[Postgres adapter] --> RP
 ```
 
-### The practical rule
+The arrows only point inward, toward the domain. That is the whole trick: without it, transport concerns leak into service methods and service methods leak into queries, and untangling that later is expensive.
 
-Without that constraint, transport concerns creep into service methods, and service methods creep into repository queries. By the time the codebase is large enough to feel the pain, untangling it is expensive. The arrows above only ever point inward, toward the domain, which is what keeps the outer layers swappable.
+### Feature slices, not layer folders
 
-### The repository layout
-
-Feature slices make that rule visible in the directory tree:
+Feature slices make the rule visible in the tree:
 
 ```text
 internal/
@@ -41,11 +39,11 @@ internal/
         └── http/
 ```
 
-I prefer this over a global `handlers/`, `services/`, `repositories/` split because the feature stays together. If I am changing user behavior, I stay under `internal/user` and see the domain, contracts, use cases, and adapters in one place. No cross-directory hunting.
+I prefer this over a global `handlers/`, `services/`, `repositories/` split: changing user behavior keeps me under `internal/user`, with domain, contracts, use cases, and adapters in one place. No cross-directory hunting.
 
-### The domain package
+### The domain knows nothing external
 
-The domain package is where the service earns its boundaries. It has validation and business rules, but no Gin, no GORM, no config loader. Everything here is plain Go, so tests run fast and never touch the network.
+The domain package has validation and business rules — but no Gin, no GORM, no config loader. Plain Go, so tests run fast and never touch the network.
 
 ```go
 // internal/user/domain/user.go
@@ -72,7 +70,7 @@ func NewUser(email, name string) (*User, error) {
 
 ### Ports as contracts
 
-The ports package defines what the rest of the feature is allowed to depend on. The repository is an output port: the service needs persistence, but it does not need to know that PostgreSQL is behind it.
+Ports define what the feature may depend on. The repository is an output port: the service needs persistence, not the knowledge that PostgreSQL is behind it.
 
 ```go
 // internal/user/ports/repository.go
@@ -86,11 +84,11 @@ type UserRepository interface {
 }
 ```
 
-Because the interface lives next to the service — not next to the adapter — I can write and fully test the service before a single line of PostgreSQL code exists.
+The interface lives next to the service, not the adapter — so I can fully test the service before a line of PostgreSQL exists.
 
 ### The service layer
 
-The service uses that port. This is the part I care about most in tests: duplicate-email handling, entity creation, and persistence can all be checked with a mock repository, no database booted.
+This is the part I care about most in tests. Duplicate-email handling, entity creation, and persistence all check against a mock repository — no database booted.
 
 ```go
 func (s *UserService) CreateUser(ctx context.Context, email, name string) (*domain.User, error) {
@@ -117,7 +115,7 @@ func (s *UserService) CreateUser(ctx context.Context, email, name string) (*doma
 
 ### HTTP as an adapter, not the owner
 
-HTTP is then an adapter, not the owner of the application. The handler binds JSON, calls the service port, and maps domain errors to status codes. It does not make business decisions.
+HTTP is an adapter, not the owner. The handler binds JSON, calls the service port, and maps domain errors to status codes — no business decisions.
 
 ```go
 func (h *UserHandler) CreateUser(c *gin.Context) {
@@ -139,7 +137,7 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 }
 ```
 
-Each step in the `CreateUser` path crosses a boundary on purpose, so the flow stays easy to reason about.
+Each step in `CreateUser` crosses a boundary on purpose.
 
 ```mermaid
 flowchart LR
@@ -151,6 +149,6 @@ flowchart LR
 
 ### The honest tradeoff
 
-This structure has a cost. There are more files than a quick CRUD service needs, and the first setup feels like overhead. The payoff shows up later, when you can add another adapter, replace persistence, or test use cases without dragging infrastructure into every assertion.
+It costs files. More than a quick CRUD service needs, and the first setup feels like overhead. The payoff is later: add an adapter, swap persistence, or test use cases without dragging infrastructure into every assertion.
 
-The template is not trying to make Go abstract. It is trying to keep the parts that change from owning the parts that matter. It is the same instinct behind [the subprocess library I wrote](/posts/subprocess-go-library) — a narrow surface over a real primitive, with the sharp edges left visible.
+The point is not abstract Go. It is keeping the parts that change from owning the parts that matter — the same instinct behind [the subprocess library I wrote](/posts/subprocess-go-library): a narrow surface over a real primitive, sharp edges left visible.
