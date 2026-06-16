@@ -1,17 +1,17 @@
 ---
 author: Tran Cuong
 pubDatetime: 2026-06-13T10:00:00.000+07:00
-modDatetime: 2026-06-15T10:00:00.000+07:00
-title: "How I stopped parallel Claude Code agents from trampling main with wtguard"
+modDatetime: 2026-06-16T10:00:00.000+07:00
+title: "wtguard: a three-layer guard that keeps parallel agents off main"
 featured: true
 draft: false
 tags: ["go", "git", "agents"]
-description: "How I run parallel Claude Code agents on one repo with Docker isolation, git coordination, and the wtguard commit guard"
+description: "Run parallel Claude Code agents on one repo — Docker isolation, git-as-lock coordination, and a commit guard that can't be bypassed."
 ---
 
-The first time I ran multiple Claude Code sessions against the same repository, the failure mode was obvious: they shared the same working tree, the same index, and the same idea that `main` was a reasonable place to put work.
+The first time I ran multiple Claude Code sessions against one repository, the failure was obvious: they shared a working tree, an index, and the same idea that `main` was a fine place to put work.
 
-That does not scale. Two agents editing the same checkout is not collaboration. It is a race condition with a chat interface. My fix has two halves — give each agent an isolated workspace, and put a hard guard at the one boundary where mistakes become shared history.
+Two agents editing the same checkout is not collaboration. It is a race condition with a chat interface. My fix has two halves — an isolated workspace per agent, and a hard guard at the one boundary where mistakes become shared history.
 
 ```mermaid
 flowchart LR
@@ -26,7 +26,7 @@ flowchart LR
 
 ### Isolated workspaces via Docker
 
-`agent-teams-setup` runs each agent in its own Docker container. On startup the container configures Git and clones the shared upstream into a private `/workspace`, so the file system state is isolated even though the history is shared.
+`agent-teams-setup` runs each agent in its own Docker container. On startup it configures Git and clones the shared upstream into a private `/workspace` — file-system state isolated, history shared.
 
 ```bash
 # scripts/agent-entrypoint.sh
@@ -40,11 +40,11 @@ git clone /upstream /workspace
 cd /workspace
 ```
 
-`spawn-agents.sh` turns the team config into containers, mounting the same `/upstream` into each one. That small separation matters: an agent can run formatters, write temp files, and inspect its own dirty state without touching another agent's index.
+`spawn-agents.sh` turns the team config into containers, mounting the same `/upstream` into each. That separation lets an agent run formatters, write temp files, and inspect its own dirty state without touching another's index.
 
 ### Coordinating through Git, not each other
 
-The agents never talk to each other directly. They coordinate through Git. To claim work, an agent writes a lock file under `current_tasks/`, commits it, and pushes. If the push fails, someone else claimed it first — Git push atomicity is the lock.
+Agents never talk to each other directly — they coordinate through Git. To claim work, an agent writes a lock file under `current_tasks/`, commits it, and pushes. If the push fails, someone else claimed it first. Push atomicity is the lock.
 
 ```mermaid
 stateDiagram-v2
@@ -58,7 +58,7 @@ stateDiagram-v2
   WorkSession --> [*]
 ```
 
-The loop also treats sync as a normal operation, not an exceptional one. It pulls before each session, and falls back to a hard reset only when a rebase cannot apply cleanly.
+The loop treats sync as normal, not exceptional: pull before each session, fall back to a hard reset only when a rebase cannot apply cleanly.
 
 ```bash
 git pull --rebase origin main 2>/dev/null || {
@@ -76,7 +76,7 @@ fi
 
 ### The guard at the git boundary
 
-Docker agents coordinate through the shared upstream, but my own terminal still needs one hard rule: never commit directly to `main`. A plain pre-commit hook is not enough — an agent (or I) can pass `--no-verify`, delete the hook, or work in a fresh clone. So `wtguard` stacks three independent layers behind one install:
+Docker agents coordinate through the upstream, but my own terminal still needs one rule: never commit directly to `main`. A plain pre-commit hook is not enough — anyone can pass `--no-verify`, delete the hook, or work in a fresh clone. So `wtguard` stacks three independent layers behind one install:
 
 1. A `git` proxy placed first on `PATH`, which catches `--no-verify` and a missing hook.
 2. The pre-commit hook itself, for when the proxy is bypassed (`/usr/bin/git` called directly).
@@ -102,6 +102,6 @@ func Decide(r Rule) Decision {
 }
 ```
 
-The caller precomputes the `Rule` — branch, detached state, worktree count, protected list — so `Decide` stays a pure function I can unit-test without a repo. A second policy, `worktree-active`, only blocks when an extra worktree is open, for people who want the guard to step aside when they are genuinely working alone.
+The caller precomputes the `Rule` — branch, detached state, worktree count, protected list — so `Decide` stays a pure function I unit-test without a repo. A second policy, `worktree-active`, only blocks when an extra worktree is open, for people who want the guard to step aside when working alone.
 
-None of these pieces is clever by itself. Agents get isolated workspaces, tasks get lock files, pushes go through a rebase path, and my own commits hit a guard at the git boundary. Together they turn parallel agent work from "hope nothing collides" into something I can leave running. It is one more small piece of the Claude Code setup I keep sharpening, like [the zsh plugin that resumes the right session](/posts/zsh-claude-resume).
+No piece is clever alone: isolated workspaces, lock files, a rebase path, a guard at the git boundary. Together they turn parallel agent work from "hope nothing collides" into something I leave running — one more piece of the Claude Code setup I keep sharpening, like [the zsh plugin that resumes the right session](/posts/zsh-claude-resume).

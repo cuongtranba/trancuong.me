@@ -138,7 +138,9 @@ Write the file at `src/content/posts/<slug>.md` (kebab-case slug, no date in the
 Apply the structure from Step 2 and these rules:
 
 - **Voice**: first person (I, my, we). Conversational, like explaining to a colleague.
-- **Length**: 500–800 words.
+- **Length**: 350–650 words. Shorter is better. Cut every sentence that does not move
+  the point forward — no throat-clearing, no restating a diagram in prose, no "as you
+  can see". One idea per post, followed all the way down.
 - **Opener**: the specific problem or moment — never a generic intro (1–2 short paragraphs).
 - **Overview diagram**: REQUIRED right after the opener, before the first code block — an
   architecture/flow, `stateDiagram-v2`, or `sequenceDiagram` that shows the whole system
@@ -149,9 +151,16 @@ Apply the structure from Step 2 and these rules:
 - **Code**: real extracts pulled in Step 3 — the interesting part, not boilerplate.
 - **Paragraphs**: short (2–4 sentences). Use `###` headers for sections.
 - **Ending**: stop when the point is made. No "in conclusion".
-- **Title**: what someone would actually type into Google, e.g.
-  "How I stopped parallel agents from trampling main with wtguard", not
-  "Git worktrees and parallel agents".
+- **Title**: keep the long-tail phrase someone would actually search (4+ words), but
+  **vary the opening — do not start posts with "How I"**, and make sure no two posts on
+  the blog share one formula. Rotate the form to fit the post:
+  - **Named tool + what it does** — "wtguard: a 3-layer guard that keeps agents off main"
+  - **Result-first claim** — "Shell-style command pipelines in Go, without a shell"
+  - **Concrete how** (use sparingly, never twice in a row) — "Composing os/exec with a visitor"
+
+  Avoid the bland category title ("Git worktrees and parallel agents") and avoid the
+  uniform "How I X" pattern across the blog. Before finalizing, glance at the existing
+  titles in `src/content/posts/` and pick an opening none of them already use.
 
 Fill the frontmatter from the schema at the top: today's date in `+07:00`, an empty
 `modDatetime` on first write, accurate kebab-case tags, and a `description` of ≤120
@@ -205,6 +214,7 @@ That sentence is a flowchart waiting to happen. Draw it instead.
 ## SEO checklist
 
 - [ ] Title contains the long-tail phrase someone would search (4+ words, specific)
+- [ ] Title opening is distinct from every existing post (no shared "How I" / formula)
 - [ ] Description answers "what will I learn?" in ≤120 chars
 - [ ] Target phrase appears in the first paragraph
 - [ ] At least one internal link to another post (if any exist)
