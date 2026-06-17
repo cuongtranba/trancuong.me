@@ -43,16 +43,16 @@ The skill reads `$ARGUMENTS`, maps it to a harness concern, and acts on the curr
 
 ```markdown
 description: Ymir scaffolds a project's harness skeleton for THIS project —
-  rules, lint, CI lint, wiki/context, and CLAUDE.md/AGENT.md. ...
-  Interviews the user about their techstack and builds only the skeleton —
-  never application code.
+rules, lint, CI lint, wiki/context, and CLAUDE.md/AGENT.md. ...
+Interviews the user about their techstack and builds only the skeleton —
+never application code.
 ```
 
 `init` runs the full interview; a narrow action like `add lint` asks only the questions that action needs.
 
 ### The piece I shipped first: a wiki the agent can't hand-edit
 
-Most of the harness is still stubbed, but the **wiki/context** concern is real, and it's the part I find most interesting. `ymir add context` scaffolds a `wiki/` tree and installs a `PreToolUse` hook. The hook's job is to *deny* the agent write access to its own knowledge base:
+Most of the harness is still stubbed, but the **wiki/context** concern is real, and it's the part I find most interesting. `ymir add context` scaffolds a `wiki/` tree and installs a `PreToolUse` hook. The hook's job is to _deny_ the agent write access to its own knowledge base:
 
 ```javascript
 const blocked =
@@ -62,14 +62,20 @@ const blocked =
   /\/wiki\/log\.md$/.test(norm);
 
 if (blocked) {
-  process.stdout.write(JSON.stringify({
-    hookSpecificOutput: {
-      hookEventName: "PreToolUse",
-      permissionDecision: "deny",
-      permissionDecisionReason:
-        "Wiki docs are CLI-managed. Use the Ymir wiki CLI ...",
-    },
-  }, null, 2));
+  process.stdout.write(
+    JSON.stringify(
+      {
+        hookSpecificOutput: {
+          hookEventName: "PreToolUse",
+          permissionDecision: "deny",
+          permissionDecisionReason:
+            "Wiki docs are CLI-managed. Use the Ymir wiki CLI ...",
+        },
+      },
+      null,
+      2
+    )
+  );
 }
 ```
 
@@ -91,8 +97,8 @@ sequenceDiagram
 The wiki CLI is a compiled binary. A `SessionStart` hook checks the version stamp and, on mismatch, downloads the right asset for your platform from the GitHub release:
 
 ```javascript
-const label  = detectAssetLabel(execSync("uname -sm", { encoding: "utf8" }));
-const base   = `https://github.com/muitneliss/ymir/releases/download/v${pluginVersion}`;
+const label = detectAssetLabel(execSync("uname -sm", { encoding: "utf8" }));
+const base = `https://github.com/muitneliss/ymir/releases/download/v${pluginVersion}`;
 const assetUrl = `${base}/wiki-${label}`;
 ```
 
