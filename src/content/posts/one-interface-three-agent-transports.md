@@ -34,12 +34,16 @@ This is `src/shared/harness-types.ts` — the entire abstraction the three trans
 
 ```typescript
 export interface HarnessTurn {
-  provider: AgentProvider
-  stream: AsyncIterable<HarnessEvent>
-  getAccountInfo?: () => Promise<AccountInfo | null>
-  getContextUsage?: () => Promise<{ percentage: number; totalTokens: number; maxTokens: number } | null>
-  interrupt: () => Promise<void>
-  close: () => void
+  provider: AgentProvider;
+  stream: AsyncIterable<HarnessEvent>;
+  getAccountInfo?: () => Promise<AccountInfo | null>;
+  getContextUsage?: () => Promise<{
+    percentage: number;
+    totalTokens: number;
+    maxTokens: number;
+  } | null>;
+  interrupt: () => Promise<void>;
+  close: () => void;
 }
 ```
 
@@ -52,14 +56,18 @@ The Claude SDK path is the easy one — the SDK already hands back an async quer
 ```typescript
 const q = sdk.startup
   ? (await sdk.startup({ options })).query(args.content)
-  : sdk.query({ prompt: args.content, options })
+  : sdk.query({ prompt: args.content, options });
 
 return {
   provider: "claude",
   stream: createClaudeHarnessStream(q),
-  interrupt: async () => { await q.interrupt() },
-  close: () => { q.close() },
-}
+  interrupt: async () => {
+    await q.interrupt();
+  },
+  close: () => {
+    q.close();
+  },
+};
 ```
 
 Codex shares none of that machinery. `codex app-server` speaks JSON-RPC: I send `turn/start`, then `item/started` notifications arrive on the child's stdout, one JSON object per line. There's no async iterable to hand back, so I build one — an `AsyncQueue<HarnessEvent>` that a `readline` loop feeds as lines come in, exposed as the same `stream`.

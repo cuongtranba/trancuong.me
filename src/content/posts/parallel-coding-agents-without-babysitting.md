@@ -31,8 +31,15 @@ The sidebar groups chats by project, and several sessions for the same repo sit 
 Two operations make this cheap: **fork** spins a new session off a summary of the current one, and **merge** folds several back into one (`useAppState.ts`):
 
 ```ts
-handleForkSession: (intent, provider, model, preset?) => Promise<void>
-handleMergeSession: (chatIds: string[], intent, provider, model, preset?, closeSources?) => Promise<void>
+handleForkSession: (intent, provider, model, preset?) => Promise<void>;
+handleMergeSession: (
+  chatIds: string[],
+  intent,
+  provider,
+  model,
+  preset?,
+  closeSources?
+) => Promise<void>;
 ```
 
 ### Parallel by default
@@ -58,12 +65,14 @@ This only works if you can leave. Kanna watches every session's status and pushe
 
 ```ts
 for (const [chatId, status] of currentActive) {
-  const prev = previousStatuses.get(chatId)
+  const prev = previousStatuses.get(chatId);
   if (status === "waiting_for_user" && prev !== "waiting_for_user") {
     void sendPushToAll(pushStore, {
-      title: "Input needed", body: chat?.title || chatId,
-      url: `/chat/${chatId}`, tag: `waiting-${chatId}`,
-    })
+      title: "Input needed",
+      body: chat?.title || chatId,
+      url: `/chat/${chatId}`,
+      tag: `waiting-${chatId}`,
+    });
   }
 }
 ```
