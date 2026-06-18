@@ -48,6 +48,6 @@ The piece I shipped first is `wiki/context`: a small, LLM-maintained knowledge b
 
 ### Why one skill instead of a toolbox
 
-The design bet is that a harness is a small, fixed set of concerns — rules, lint, CI, context, the steering file — and the variation is only in *how* each maps to your stack. So Ymir doesn't need a sprawling command surface. It needs one skill that understands intent and a set of templates behind it.
+The design bet is that a harness is a small, fixed set of concerns — rules, lint, CI, context, the steering file — and the variation is only in _how_ each maps to your stack. So Ymir doesn't need a sprawling command surface. It needs one skill that understands intent and a set of templates behind it.
 
 It's early — `v0.2.0`, with the wiki concern real and lint/CI/rules still stubbed. But the division of labor is the whole idea: Ymir owns the setup so the agent can own the code, and neither one steps on the other.
