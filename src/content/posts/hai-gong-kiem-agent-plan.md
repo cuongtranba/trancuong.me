@@ -64,11 +64,11 @@ I'm not trying to get a yes or no out of this either. The two sides collide on t
 
 ## Tiếng Việt
 
-Một thằng bạn tôi để ý cái workflow planning của Claude hay đi chứng minh chính nó đúng. Viết xong bản nháp kế hoạch, nó tự review lại bản đó, rồi kết luận là ổn. Agent nào tôi chạy cũng dính.
+Một bạn tôi nhận ra workflow planning của Claude rất hay tự đi chứng minh nó đúng. Nó viết draft plan, tự review chính bản đó, rồi bảo ổn. Tôi chạy agent nào cũng thấy bệnh này.
 
-Vấn đề là tự kiểm tra việc của mình thì dở. Lúc review plan của mình tôi đâu có trung lập. Tôi muốn nó đúng sẵn rồi, nên tôi đi tìm lý do nó chạy được chứ không tìm lý do nó gãy. Đó là thiên kiến xác nhận, và LLM cũng đo được cái này.
+Vấn đề rất đời: tự soi việc của mình khó. Khi tôi review plan của chính tôi, tôi không trung lập. Trong đầu tôi đã muốn nó đúng. Thế là tôi đi nhặt lý do để nó chạy được, chứ không đào lý do làm nó gãy. Đó là confirmation bias. LLM cũng dính, không có gì lạ.
 
-Nên thay vì một bước tự review, tôi dựng hai gọng kiềm ngược nhau quanh bản nháp.
+Vì vậy tôi bỏ kiểu một bước tự review. Tôi kẹp draft plan bằng hai gọng kiềm ngược chiều.
 
 ```mermaid
 flowchart LR
@@ -79,11 +79,11 @@ flowchart LR
   VC --> VR["Kế hoạch sửa tốt hơn"]
 ```
 
-### Vì sao tự review lại mù
+### Vì sao tự review bị mù
 
-Bài 2-4-6 của Wason là ví dụ kinh điển. Người ta kiểm tra một phán đoán bằng cách đi tìm trường hợp xác nhận nó, chứ không tìm trường hợp làm nó sai. Mà muốn tìm ra luật thật thì phải thử đúng cái có thể làm mình sai.
+Bài 2-4-6 của Wason là ví dụ kinh điển. Người ta có một phỏng đoán, rồi hay đi tìm ví dụ xác nhận phỏng đoán đó. Ít ai chịu thử thứ có thể làm nó sai. Nhưng muốn tìm ra luật thật thì phải làm đúng việc đó.
 
-Agent tự review plan của nó y chang. Bảo nó chứng minh plan đúng thì nó đi gom bằng chứng ủng hộ, chỗ nào mơ hồ thì đọc theo hướng có lợi cho nó. Thành một vòng lặp:
+Agent tự review plan cũng vậy. Bảo nó chứng minh plan đúng thì nó đi gom bằng chứng ủng hộ. Chỗ nào mơ hồ, nó đọc theo hướng có lợi cho plan. Thế là thành một vòng lặp:
 
 ```mermaid
 flowchart TD
@@ -95,20 +95,22 @@ flowchart TD
 
 ### Hai gọng
 
-Gọng một: chứng minh plan đúng. Đây là steelman, dựng bản mạnh nhất của plan, lý lẽ cứng nhất bênh nó. Không phải khen suông, mà cãi thật cho nó.
+Gọng một chứng minh plan đúng. Đây là steelman: dựng phiên bản mạnh nhất của plan, rồi đưa ra lý lẽ cứng nhất để bênh nó. Không phải khen cho có. Phải thật sự cãi cho nó.
 
-Gọng hai: chứng minh plan sai. Đây là red team, hay nói chữ thì là khả phủ chứng kiểu Popper: cố hết sức đập cho nó gãy. Plan nào sống sót qua một trận đập thật thì đáng tin hơn nhiều cái plan chỉ được duyệt cho qua.
+Gọng hai chứng minh plan sai. Đây là red team, hoặc nếu muốn gọi đúng sách vở thì là falsification kiểu Popper: cố hết sức đập cho nó gãy. Một plan sống sót qua cú đập thật đáng tin hơn nhiều so với plan chỉ được gật đầu cho qua.
 
-Có một chỗ phải để ý, và nó quan trọng. Gọng hai chỉ ăn thua nếu nó độc lập thật. Agent mà chỉ đổi sang "chế độ phản biện" thì vẫn xài chung mấy điểm mù của chính nó lúc nãy. Nên tôi cho gọng hai chạy bằng một subagent riêng, context riêng, không thấy gọng một cãi gì. Cũng là lý do tôi [chạy agent song song thành nhiều process tách biệt](/posts/parallel-coding-agents-without-babysitting/) chứ không nhét hết vào một luồng.
+Có một điểm phải làm nghiêm. Gọng hai chỉ có tác dụng nếu nó độc lập thật. Một agent vừa mới viết plan rồi tự chuyển sang "critic mode" vẫn mang theo cùng context, cùng giả định, cùng điểm mù. Nó tưởng đang phản biện, nhưng nhiều khi chỉ là tự diễn vai phản biện.
+
+Nên tôi cho gọng hai chạy bằng một subagent riêng, context riêng, không thấy gọng một đã bênh gì. Cũng là lý do tôi [chạy agent song song bằng nhiều process tách biệt](/posts/parallel-coding-agents-without-babysitting/) thay vì nhét hết vào một luồng.
 
 ### Chỉ đọc điểm hội tụ
 
-Tới chỗ hay. Tôi không đọc cả plan. Tôi đọc đúng chỗ gọng một nói "ổn" còn gọng hai nói "gãy" trên cùng một giả định.
+Phần đáng tiền nằm ở đây. Tôi không đọc cả plan. Tôi đọc đúng chỗ gọng một nói "ổn" còn gọng hai nói "gãy" trên cùng một giả định.
 
 ```
 sai  ───────►  điểm hội tụ  ◄───────  đúng
 ```
 
-Cái giả định đó là crux: đổi nó thì kết luận đổi theo. Tín hiệu nằm hết ở đó. Mấy chỗ cãi qua cãi lại bên lề thì bỏ.
+Giả định đó là crux. Đổi nó thì kết luận đổi theo. Tín hiệu nằm ở đó. Mấy đoạn hai bên cãi vòng ngoài thì tôi bỏ.
 
-Tôi cũng không cố lấy ra một câu trả lời đúng hay sai. Hai bên va vào crux, nó lòi ra cái giả định mà tôi không biết là mình đang giả định, rồi tôi sửa plan. Mục tiêu không phải chọn bên thắng, mà là plan ra tốt hơn. Plan tốt hơn, mà tôi chỉ phải đọc khúc giữa.
+Tôi cũng không dùng cách này để lấy một verdict đúng hay sai. Hai bên va vào crux, nó lòi ra giả định mà tôi không biết là mình đang dùng, rồi tôi sửa plan. Mục tiêu không phải chọn bên thắng, mà là có một plan tốt hơn. Tôi chỉ đọc đúng đoạn giữa.
