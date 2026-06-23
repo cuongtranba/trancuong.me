@@ -6,16 +6,16 @@ title: "Two pincers: making an agent prove its plan both right and wrong"
 featured: false
 draft: false
 tags: ["ai-agents", "critical-thinking"]
-description: "Two adversarial pincers that force an agent to break its own plan, instead of rubber-stamping it from confirmation bias"
+description: "Two opposing pincers that force an agent to break its own plan instead of rubber-stamping it from confirmation bias"
 ---
 
-> Bài viết song ngữ — bản tiếng Anh trước, bản tiếng Việt ở dưới.
+> Bài viết song ngữ. Bản tiếng Anh trước, bản tiếng Việt ở dưới.
 
-A friend pointed out something about Claude's planning workflow: it tends to go _prove itself right_. It writes a draft plan, reviews its own plan, then nods — "looks good". I see the same thing in every agent I run.
+A friend of mine noticed that Claude's planning workflow usually tries to prove itself right. It writes a draft plan, reviews that same plan, and decides it's fine. Every agent I run does this.
 
-The problem is that one brain checking itself is terrible at it. When I review my own plan I'm not neutral — I already want it to be right. So instead of hunting for where it breaks, I gather evidence that it holds. That's confirmation bias, and it's measurable right on an LLM.
+The problem is that checking your own work is hard. When I review my own plan I'm not neutral. I already want it to be right, so I go looking for reasons it works instead of reasons it breaks. That's confirmation bias, and you can measure it in an LLM too.
 
-My fix: instead of a single "self-review" step, build **two adversarial pincers** around the draft.
+So instead of one self-review step, I set up two opposing pincers around the draft.
 
 ```mermaid
 flowchart LR
@@ -28,9 +28,9 @@ flowchart LR
 
 ### Why self-review goes blind
 
-Peter Wason's 2-4-6 task showed people test a hypothesis by hunting for _confirmation_, not _refutation_. The only way the truth surfaces is to actively test something that could prove you wrong.
+Wason's 2-4-6 task is the classic example. People test a guess by looking for cases that confirm it, not cases that break it. But the only way to find the actual rule is to try something that could prove you wrong.
 
-An agent that writes its own plan then reviews it falls into the exact same trap. Tell it to "prove the plan right" and it gathers confirmation, locking into a self-reinforcing loop:
+An agent reviewing its own plan does the same thing. Ask it to prove the plan is right and it goes off to collect supporting evidence, then reads anything ambiguous in its own favor. It turns into a loop:
 
 ```mermaid
 flowchart TD
@@ -42,35 +42,33 @@ flowchart TD
 
 ### The two pincers
 
-**Pincer 1 — prove it RIGHT.** This is the _steelman_: rebuild the plan in its strongest, best-defended form. Not praise — the hardest possible case _for_ it.
+Pincer one proves the plan right. This is a steelman: build the strongest version of the plan you can, the best case for it. Not cheerleading, actual hard arguments in its favor.
 
-**Pincer 2 — prove it WRONG.** This is _red team_ / Popper's falsification: try as hard as you can to break the plan. A plan that survives a real attack is far more trustworthy than one that only got a nod.
+Pincer two proves the plan wrong. This is the red team, or Popper's falsification if you want the fancy word: try hard to break it. A plan that survives a real beating is worth a lot more than one that just got approved.
 
-The crucial caveat: pincer 2 only has value when it's **genuinely independent**. An agent that just puts on a "critic" hat still shares its own blind spots. I run pincer 2 as an outside red team — a separate subagent, separate context, blind to pincer 1's reasoning. That's also why I [split agents into independent parallel runs](/posts/parallel-coding-agents-without-babysitting/) instead of cramming everything into one thread.
+One catch, and it's the important one. Pincer two only works if it's actually independent. An agent that just flips into "critic mode" is still carrying the same blind spots it had a second ago. So I run pincer two as a separate subagent with its own context, blind to whatever pincer one argued. It's the same reason I [run agents in parallel as separate processes](/posts/parallel-coding-agents-without-babysitting/) instead of one thread doing everything.
 
 ### Read only the convergence point
 
-Instead of reading the whole long plan, I read only the **convergence point** — where the right-pincer says "ok" and the wrong-pincer says "broken" _on the same assumption_.
+Here's the useful part. I don't read the whole plan. I read the one spot where pincer one says "fine" and pincer two says "broken" about the same assumption.
 
 ```
 wrong  ───────►  convergence  ◄───────  right
 ```
 
-That assumption is the _crux_: the claim that, if it flips, flips the conclusion. All the signal lives there; the bikeshedding on the edges I skip.
+That assumption is the crux: change it and the conclusion changes with it. All the signal is there. The arguing around the edges I skip.
 
-And the result isn't an accept/reject verdict. The two pincers collide at the crux, expose my own hidden assumption, and I _revise_ the plan into something better — pure dialectic: opposition for a better synthesis, not for one side to win.
-
-A mirror, not a judge.
+I'm not trying to get a yes or no out of this either. The two sides collide on the crux, it surfaces an assumption I didn't know I was making, and I fix the plan. The goal isn't to pick a winner, it's to end up with a better plan. Better plan, and I only had to read the middle.
 
 ---
 
 ## Tiếng Việt
 
-Bạn tôi để ý một thứ trong workflow planning của Claude: nó hay đi _chứng minh chính nó đúng_. Viết xong bản nháp kế hoạch, nó tự review, rồi gật gù — "ổn rồi". Tôi cũng thấy y vậy ở mọi con agent tôi chạy.
+Một thằng bạn tôi để ý cái workflow planning của Claude hay đi chứng minh chính nó đúng. Viết xong bản nháp kế hoạch, nó tự review lại bản đó, rồi kết luận là ổn. Agent nào tôi chạy cũng dính.
 
-Vấn đề là một bộ não tự kiểm tra chính nó thì rất dở. Khi tôi review plan của mình, tôi không trung lập — tôi đã muốn nó đúng rồi. Nên thay vì đi tìm chỗ nó gãy, tôi đi gom bằng chứng nó vững. Đây là thiên kiến xác nhận (_confirmation bias_), và nó đo được ngay trên LLM.
+Vấn đề là tự kiểm tra việc của mình thì dở. Lúc review plan của mình tôi đâu có trung lập. Tôi muốn nó đúng sẵn rồi, nên tôi đi tìm lý do nó chạy được chứ không tìm lý do nó gãy. Đó là thiên kiến xác nhận, và LLM cũng đo được cái này.
 
-Cách tôi chữa: thay vì một bước "tự soát lỗi", dựng **hai gọng kiềm** đối kháng quanh bản nháp.
+Nên thay vì một bước tự review, tôi dựng hai gọng kiềm ngược nhau quanh bản nháp.
 
 ```mermaid
 flowchart LR
@@ -83,9 +81,9 @@ flowchart LR
 
 ### Vì sao tự review lại mù
 
-Bài toán 2-4-6 của Peter Wason cho thấy con người kiểm định giả thuyết bằng cách đi tìm _xác nhận_, không phải _phản chứng_. Cách duy nhất lộ ra sự thật là chủ động test một thứ có thể làm mình sai.
+Bài 2-4-6 của Wason là ví dụ kinh điển. Người ta kiểm tra một phán đoán bằng cách đi tìm trường hợp xác nhận nó, chứ không tìm trường hợp làm nó sai. Mà muốn tìm ra luật thật thì phải thử đúng cái có thể làm mình sai.
 
-Một con agent tự viết plan rồi tự review dính y hệt. Bắt nó "chứng minh plan đúng" thì nó gom xác nhận, khóa thành vòng tự củng cố:
+Agent tự review plan của nó y chang. Bảo nó chứng minh plan đúng thì nó đi gom bằng chứng ủng hộ, chỗ nào mơ hồ thì đọc theo hướng có lợi cho nó. Thành một vòng lặp:
 
 ```mermaid
 flowchart TD
@@ -97,22 +95,20 @@ flowchart TD
 
 ### Hai gọng
 
-**Gọng 1 — chứng minh ĐÚNG.** Đây là _steelman_: dựng lại kế hoạch ở phiên bản mạnh nhất, phòng thủ tốt nhất có thể. Không phải khen, mà là tìm lý lẽ cứng nhất bênh nó.
+Gọng một: chứng minh plan đúng. Đây là steelman, dựng bản mạnh nhất của plan, lý lẽ cứng nhất bênh nó. Không phải khen suông, mà cãi thật cho nó.
 
-**Gọng 2 — chứng minh SAI.** Đây là _red team_ / tinh thần khả phủ chứng của Popper: cố hết sức đập cho plan gãy. Một kế hoạch sống sót qua nỗ lực phá thật sự thì đáng tin hơn nhiều một kế hoạch chỉ được gật đầu.
+Gọng hai: chứng minh plan sai. Đây là red team, hay nói chữ thì là khả phủ chứng kiểu Popper: cố hết sức đập cho nó gãy. Plan nào sống sót qua một trận đập thật thì đáng tin hơn nhiều cái plan chỉ được duyệt cho qua.
 
-Mấu chốt nằm ở caveat này: gọng 2 chỉ có giá trị khi nó **thật sự độc lập**. Một con agent tự đội thêm cái mũ "phản biện" vẫn dính chung điểm mù với chính nó. Tôi chạy gọng 2 như một red team người ngoài — subagent riêng, context riêng, không thấy lý lẽ của gọng 1. Đây cũng là lý do tôi tách [agent ra chạy song song độc lập](/posts/parallel-coding-agents-without-babysitting/) thay vì nhồi mọi thứ vào một luồng.
+Có một chỗ phải để ý, và nó quan trọng. Gọng hai chỉ ăn thua nếu nó độc lập thật. Agent mà chỉ đổi sang "chế độ phản biện" thì vẫn xài chung mấy điểm mù của chính nó lúc nãy. Nên tôi cho gọng hai chạy bằng một subagent riêng, context riêng, không thấy gọng một cãi gì. Cũng là lý do tôi [chạy agent song song thành nhiều process tách biệt](/posts/parallel-coding-agents-without-babysitting/) chứ không nhét hết vào một luồng.
 
 ### Chỉ đọc điểm hội tụ
 
-Thay vì đọc cả bản kế hoạch dài thượt, tôi chỉ đọc **điểm hội tụ** — nơi gọng-đúng nói "ok" còn gọng-sai nói "gãy" _trên cùng một giả định_.
+Tới chỗ hay. Tôi không đọc cả plan. Tôi đọc đúng chỗ gọng một nói "ổn" còn gọng hai nói "gãy" trên cùng một giả định.
 
 ```
 sai  ───────►  điểm hội tụ  ◄───────  đúng
 ```
 
-Cái giả định đó chính là _crux_: mệnh đề mà nếu nó đổi thì kết luận đổi theo. Mọi tín hiệu nằm ở đó. Cãi vặt bên lề thì bỏ qua.
+Cái giả định đó là crux: đổi nó thì kết luận đổi theo. Tín hiệu nằm hết ở đó. Mấy chỗ cãi qua cãi lại bên lề thì bỏ.
 
-Và kết quả không phải một phán quyết accept/reject. Hai gọng va vào nhau ở crux, lộ ra giả định ngầm của chính tôi, rồi tôi _sửa_ plan cho tốt hơn — đúng tinh thần biện chứng: đối nghịch để ra một tổng hợp tốt hơn, không phải để một bên thắng.
-
-Tấm gương, không phải quan tòa.
+Tôi cũng không cố lấy ra một câu trả lời đúng hay sai. Hai bên va vào crux, nó lòi ra cái giả định mà tôi không biết là mình đang giả định, rồi tôi sửa plan. Mục tiêu không phải chọn bên thắng, mà là plan ra tốt hơn. Plan tốt hơn, mà tôi chỉ phải đọc khúc giữa.
