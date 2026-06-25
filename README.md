@@ -80,15 +80,15 @@ pnpm dev            # dev server at localhost:4321 (no search index)
 
 ## Commands
 
-| Command            | Action                                                            |
-| :----------------- | :---------------------------------------------------------------- |
-| `pnpm dev`         | Start dev server (no Pagefind index)                              |
-| `pnpm build`       | Type-check → build → Pagefind index → copy to `public/`           |
-| `pnpm preview`     | Preview the production build                                      |
-| `pnpm lint`        | ESLint                                                            |
-| `pnpm format`      | Prettier (write)                                                  |
-| `pnpm format:check`| Prettier (check only)                                             |
-| `pnpm test`        | Run all Vitest tests                                              |
+| Command             | Action                                                  |
+| :------------------ | :------------------------------------------------------ |
+| `pnpm dev`          | Start dev server (no Pagefind index)                    |
+| `pnpm build`        | Type-check → build → Pagefind index → copy to `public/` |
+| `pnpm preview`      | Preview the production build                            |
+| `pnpm lint`         | ESLint                                                  |
+| `pnpm format`       | Prettier (write)                                        |
+| `pnpm format:check` | Prettier (check only)                                   |
+| `pnpm test`         | Run all Vitest tests                                    |
 
 ## Contact
 
