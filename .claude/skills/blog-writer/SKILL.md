@@ -166,6 +166,30 @@ Fill the frontmatter from the schema at the top: today's date in `+07:00`, an em
 `modDatetime` on first write, accurate kebab-case tags, and a `description` of ≤120
 characters that answers "what will I learn?".
 
+### Bilingual posts (English + Vietnamese)
+
+When the user asks for both languages, write **two separate files**: the English post
+(`<slug>.md`) and the Vietnamese post (its own Vietnamese slug, e.g.
+`llm-bat-dinh-cong-kiem-tra-tat-dinh.md`), with the same tags and `pubDatetime`s a few
+minutes apart.
+
+The Vietnamese post is written natively, not translated word for word:
+
+- **Keep technical keywords in English.** Vietnamese developers read and say them in
+  English every day, so a translated term is harder to understand than the original.
+  Keep words like raw lake, dashboard, connector, schema, table, model, pipeline,
+  tenant, role, create-only, hash, deploy, agent, prompt, tool, CLI, MCP, API. Do not
+  write "hồ dữ liệu thô", "lược đồ", "đầu nối", "tác tử", or "tất định" for them. This
+  applies to titles and Mermaid labels too.
+- **Explain instead of translating.** The first time a keyword a non-specialist may not
+  know appears, follow it with a short plain-Vietnamese explanation of what it does, e.g.
+  "raw lake — nơi cất bản gốc của dữ liệu, đúng từng byte như lúc lấy về".
+- **Read it aloud as a Vietnamese engineer would say it**; rewrite anything that sounds
+  translated.
+
+The same spirit applies to the English post: explain each jargon term in plain words
+the first time it appears, so a reader outside that niche can follow.
+
 ---
 
 ## Step 5 — Confirm and report
