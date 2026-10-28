@@ -1,0 +1,38 @@
+---
+import { getCollection, render } from "astro:content";
+import Layout from "@/layouts/Layout.astro";
+import Header from "@/components/Header.astro";
+import Main from "@/components/Main.astro";
+import Footer from "@/components/Footer.astro";
+import config from "@/config";
+
+// Legal pages for the Omninoise studio: src/content/pages/omninoise/*.md
+// become /omninoise/<name>. Deliberately not linked from the main nav.
+export async function getStaticPaths() {
+  const pages = await getCollection("pages", ({ id }) =>
+    id.startsWith("omninoise/")
+  );
+  return pages.map(entry => ({
+    params: { page: entry.id.replace("omninoise/", "") },
+    props: { entry },
+  }));
+}
+
+const { entry } = Astro.props;
+const { Content } = await render(entry);
+---
+
+<Layout
+  title={`${entry.data.title} | ${config.site.title}`}
+  description={entry.data.description}
+  ogImage={entry.data.ogImage}
+  canonicalURL={entry.data.canonicalURL}
+>
+  <Header />
+
+  <Main pageTitle={entry.data.title} class="app-prose">
+    <Content />
+  </Main>
+
+  <Footer />
+</Layout>
