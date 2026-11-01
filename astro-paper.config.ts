@@ -31,6 +31,11 @@ export default defineAstroPaperConfig({
   },
   socials: [
     { name: "github", url: "https://github.com/cuongtranba" },
+    { name: "youtube", url: "https://www.youtube.com/@techlifeinsightsai" },
+    { name: "tiktok", url: "https://www.tiktok.com/@techlifeinsights" },
+    { name: "instagram", url: "https://www.instagram.com/techlifeinsightsai" },
+    { name: "facebook", url: "https://www.facebook.com/techlifeinsights" },
+    { name: "threads", url: "https://www.threads.com/@techlifeinsightsai" },
     { name: "mail", url: "mailto:bacuongtr@gmail.com" },
   ],
   shareLinks: [

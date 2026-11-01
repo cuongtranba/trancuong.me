@@ -1,0 +1,131 @@
+---
+import { getCollection } from "astro:content";
+import Layout from "@/layouts/Layout.astro";
+import Header from "@/components/Header.astro";
+import Main from "@/components/Main.astro";
+import Footer from "@/components/Footer.astro";
+import Card from "@/components/Card.astro";
+import LinkButton from "@/components/LinkButton.astro";
+import { getSortedPosts } from "@/utils/getSortedPosts";
+import config from "@/config";
+
+// Hub that every Tech Life Insights channel bio and post links to.
+// Deliberately not linked from the main nav.
+const channels = [
+  {
+    platform: "YouTube",
+    handle: "@techlifeinsightsai",
+    url: "https://www.youtube.com/@techlifeinsightsai",
+  },
+  {
+    platform: "TikTok",
+    handle: "@techlifeinsights",
+    url: "https://www.tiktok.com/@techlifeinsights",
+  },
+  {
+    platform: "Instagram",
+    handle: "@techlifeinsightsai",
+    url: "https://www.instagram.com/techlifeinsightsai",
+  },
+  {
+    platform: "Facebook",
+    handle: "Tech Life Insights",
+    url: "https://www.facebook.com/techlifeinsights",
+  },
+  {
+    platform: "Threads",
+    handle: "@techlifeinsightsai",
+    url: "https://www.threads.com/@techlifeinsightsai",
+  },
+];
+
+const elsewhere = [
+  { label: "Code", url: "https://github.com/cuongtranba" },
+  { label: "Team", url: "https://multnelis.org" },
+];
+
+const latestPosts = getSortedPosts(await getCollection("posts")).slice(0, 4);
+
+const title = "Tech Life Insights";
+const description =
+  "Daily AI build lessons for developers: every Tech Life Insights channel in one place.";
+
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  name: title,
+  url: "https://trancuong.me/tli",
+  founder: {
+    "@type": "Person",
+    name: "Tran Cuong",
+    url: "https://trancuong.me/",
+  },
+  sameAs: channels.map(({ url }) => url),
+};
+---
+
+<Layout title={title} description={description}>
+  <Fragment slot="head">
+    <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
+  </Fragment>
+  <Header />
+
+  <Main
+    pageTitle={title}
+    pageDesc="Short lessons on building software with AI agents, made from real projects. Pick the channel you use."
+  >
+    <p lang="vi">
+      Mấy bài học ngắn về làm phần mềm cùng AI agent, rút ra từ dự án thật. Anh
+      em dùng mạng nào thì theo ở mạng đó.
+    </p>
+
+    <section id="channels" class="pt-8 pb-4">
+      <h2 class="text-2xl font-semibold tracking-wide">Channels</h2>
+      <ul class="mt-4 space-y-3">
+        {
+          channels.map(({ platform, handle, url }) => (
+            <li>
+              <LinkButton
+                href={url}
+                class="text-accent text-lg font-medium underline decoration-dashed underline-offset-4"
+              >
+                {platform}
+                <span class="text-foreground font-normal">{handle}</span>
+              </LinkButton>
+            </li>
+          ))
+        }
+      </ul>
+      <p class="mt-6">
+        {
+          elsewhere.map(({ label, url }, i) => (
+            <>
+              {i > 0 && " · "}
+              <LinkButton
+                href={url}
+                class="hover:text-accent underline decoration-dashed underline-offset-4"
+              >
+                {label}
+              </LinkButton>
+            </>
+          ))
+        }
+      </p>
+    </section>
+
+    {
+      latestPosts.length > 0 && (
+        <section id="latest-writeups" class="border-border border-t pt-8 pb-4">
+          <h2 class="text-2xl font-semibold tracking-wide">Latest write-ups</h2>
+          <ul>
+            {latestPosts.map(post => (
+              <Card variant="h3" {...post} />
+            ))}
+          </ul>
+        </section>
+      )
+    }
+  </Main>
+
+  <Footer />
+</Layout>
